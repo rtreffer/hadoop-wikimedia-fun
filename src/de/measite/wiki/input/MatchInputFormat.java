@@ -11,13 +11,14 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
-public class StringmatchInputFormat extends FileInputFormat<LongWritable, Text> {
+public class MatchInputFormat extends FileInputFormat<LongWritable, Text> {
 
 	@Override
-	public RecordReader<LongWritable, Text> createRecordReader(InputSplit arg0,
-	TaskAttemptContext arg1) throws IOException, InterruptedException {
-		// TODO Auto-generated method stub
-		return null;
+	public RecordReader<LongWritable, Text> createRecordReader(InputSplit split,
+	TaskAttemptContext context) throws IOException, InterruptedException {
+		RecordReader<LongWritable, Text> reader = new MatchRecordReader();
+		reader.initialize(split, context);
+		return reader;
 	}
 
 	@Override

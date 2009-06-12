@@ -34,16 +34,20 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 	private LongWritable currentKey;
 	private Text currentValue;
 
-	protected volatile ByteArrayOutputStream valueBuffer;
-	protected volatile OutputStream out;
+	protected ByteArrayOutputStream valueBuffer;
+	protected OutputStream out;
 
 	@Override
 	public void close() throws IOException {
 		if (fileIn == null) {
 			return;
 		}
+		currentKey = null;
+		currentValue = null;
+		endRecord();
 		dataIn.close();
 		fileIn = null;
+		dataIn = null;
 	}
 
 	@Override
@@ -87,7 +91,7 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		FSDataInputStream fileIn = fs.open(split.getPath());
 		fileIn.seek(split.getStart());
 		splitStart = fileIn.getPos();
-		splitEnd = splitStart + split.getLength();
+		splitEnd = split.getStart() + split.getLength();
 		final CompressionCodec codec = compressionCodecs.getCodec(file);
 		if (codec == null) {
 			dataIn = fileIn;
@@ -103,11 +107,11 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 
 	@Override
 	public boolean nextKeyValue() throws IOException, InterruptedException {
-		currentValue.set("");
-
 		if (fileIn == null || fileIn.getPos() > splitEnd) {
 			return false;
 		}
+
+		currentValue.set("");
 
 		// Step 1, seek to the next startSequence
 
@@ -116,8 +120,6 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		int read = dataIn.read(buf);
 		if (read == -1) {
 			close();
-			currentKey = null;
-			currentValue = null;
 			return false;
 		}
 		int pos = 0;
@@ -132,16 +134,12 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 			} else {
 				if (read > 0) {
 					if (fileIn.getPos() >= splitEnd) {
-						currentKey = null;
-						currentValue = null;
 						return false;
 					}
 				}
 				read = dataIn.read(buf);
 				if (read == -1) {
 					close();
-					currentKey = null;
-					currentValue = null;
 					return false;
 				}
 			}
@@ -150,20 +148,16 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		long startPos = fileIn.getPos();
 
 		startRecord();
-		final OutputStream iout = out;
-		iout.write(startSequence);
+		out.write(startSequence);
 
 		// Step 2, seek to the end sequence and write to the output buffer
 		boolean end = false;
 		read = dataIn.read(buf);
 		if (read == -1) {
-			endRecord();
 			close();
-			currentKey = null;
-			currentValue = null;
 			return false;
 		}
-		iout.write(buf);
+		out.write(buf);
 		pos = 0;
 		do {
 			if (buf[0] == endSequence[pos]) {
@@ -182,25 +176,17 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 				read = dataIn.read(buf);
 				if (read == -1) {
 					close();
-					endRecord();
-					currentKey = null;
-					currentValue = null;
 					return false;
 				}
-				iout.write(buf);
+				out.write(buf);
 			}
 		} while (!end);
 
-		if (fileIn.getPos() >= splitEnd) {
-			// We know that there are no new entries
-			close();
-		}
-
 		out.flush();
-
-		// Step 3, compute a key / value pair
 		byte[] bytes = valueBuffer.toByteArray();
 		endRecord();
+
+		// Step 3, compute a key / value pair
 		currentValue.set(bytes);
 		bytes = null;
 
@@ -210,6 +196,11 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		}
 		lastStartId++;
 		currentKey.set(startPos * 60 + lastStartId);
+
+		if (fileIn.getPos() >= splitEnd) {
+			// We know that there are no new entries
+			close();
+		}
 
 		return true;
 	}

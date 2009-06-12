@@ -26,9 +26,4 @@ public class MatchInputFormat extends FileInputFormat<LongWritable, Text> {
 		return true;
 	}
 
-	@Override
-	protected long getFormatMinSplitSize() {
-		return 16*1024*1024;
-	}
-
 }

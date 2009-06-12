@@ -12,7 +12,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -22,17 +21,27 @@ import de.measite.wiki.input.WikimediaSimplifyInputFormat;
  * Very simple M/R to count the pages in a wikimedia xml dump. Used for
  * verification of the xml record reader.
  */
-public class PageCount extends Configured implements Tool {
+public class PageSplit extends Configured implements Tool {
 
-	public static class PageMapper extends Mapper<Object, Text, Text, LongWritable> {
+	public static class PageSplitMapper extends Mapper<Object, Text, Text, Text> {
 
-		private final static LongWritable one = new LongWritable(1l);
-		private final static Text page = new Text("pages");
+		private final Text outKey = new Text();
 
 		@Override
 		protected void map(Object key, Text value, Context context)
 		throws IOException, InterruptedException {
-			context.write(page, one);
+			if (value == null) {
+				return;
+			}
+			String text = value.toString();
+			int pos = text.indexOf("\n    <title>");
+			if (pos == -1) {
+				return;
+			}
+			text = text.substring(pos + 12);
+			pos = text.indexOf("</title>");
+			outKey.set(text.substring(0, pos));
+			context.write(outKey, value);
 		}
 
 	}
@@ -41,7 +50,7 @@ public class PageCount extends Configured implements Tool {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		int result = ToolRunner.run(new Configuration(), new PageCount(), args);
+		int result = ToolRunner.run(new Configuration(), new PageSplit(), args);
 		System.exit(result);
 	}
 
@@ -57,10 +66,9 @@ public class PageCount extends Configured implements Tool {
 		conf.setLong("mapred.matchreader.record.maxSize", 180*1024*1024);
 		try {
 			Job job = new Job(conf, "page count");
-			job.setJarByClass(PageCount.class);
-			job.setMapperClass(PageMapper.class);
-			job.setCombinerClass(LongSumReducer.class);
-			job.setReducerClass(LongSumReducer.class);
+			job.setJarByClass(PageSplit.class);
+			job.setMapperClass(PageSplitMapper.class);
+			job.setNumReduceTasks(0);
 			job.setOutputFormatClass(TextOutputFormat.class);
 			job.setOutputKeyClass(Text.class);
 			job.setOutputValueClass(LongWritable.class);

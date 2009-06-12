@@ -33,6 +33,7 @@ public class PageCount extends Configured implements Tool {
 		protected void map(Object key, Text value, Context context)
 		throws IOException, InterruptedException {
 			context.write(page, one);
+			context.progress();
 		}
 
 	}

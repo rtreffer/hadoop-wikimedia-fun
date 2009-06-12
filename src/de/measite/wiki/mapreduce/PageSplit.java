@@ -18,8 +18,7 @@ import org.apache.hadoop.util.ToolRunner;
 import de.measite.wiki.input.WikimediaSimplifyInputFormat;
 
 /**
- * Very simple M/R to count the pages in a wikimedia xml dump. Used for
- * verification of the xml record reader.
+ * M/R to split the xml into "simplified" pieces. Used to verify the xml output.
  */
 public class PageSplit extends Configured implements Tool {
 

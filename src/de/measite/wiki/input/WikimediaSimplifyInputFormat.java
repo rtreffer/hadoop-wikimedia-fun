@@ -14,9 +14,7 @@ public class WikimediaSimplifyInputFormat extends MatchInputFormat {
 	@Override
 	public RecordReader<LongWritable, Text> createRecordReader(InputSplit split,
 	TaskAttemptContext context) throws IOException, InterruptedException {
-		RecordReader<LongWritable, Text> reader = new WikimediaSimplifyRecordReader();
-		reader.initialize(split, context);
-		return reader;
+		return new WikimediaSimplifyRecordReader();
 	}
 
 

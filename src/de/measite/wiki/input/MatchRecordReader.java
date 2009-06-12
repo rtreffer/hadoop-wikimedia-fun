@@ -15,9 +15,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.SplitEnabledCompressionCodec;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.MapContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 public class MatchRecordReader extends RecordReader<LongWritable, Text> {
@@ -29,6 +32,7 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 	private long maxRecordSize;
 	protected byte[] startSequence;
 	protected byte[] endSequence;
+	private boolean closed;
 	private Seekable fileIn;
 	private InputStream dataIn;
 	private LongWritable currentKey;
@@ -36,12 +40,15 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 
 	protected ByteArrayOutputStream valueBuffer;
 	protected OutputStream out;
+	private Counter inputByteCounter;
+	private MapContext<?,?,?,?> context;
 
 	@Override
 	public void close() throws IOException {
-		if (fileIn == null) {
+		if (closed) {
 			return;
 		}
+		closed = true;
 		currentKey = null;
 		currentValue = null;
 		endRecord();
@@ -63,34 +70,41 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 
 	@Override
 	public float getProgress() throws IOException, InterruptedException {
-		if (fileIn == null) {
+		if (closed) {
 			return 1f;
+		}
+		if (fileIn == null) {
+			return 0f;
 		}
 		long splitPos = fileIn.getPos();
-		if (splitPos >= splitEnd) {
-			return 1f;
-		}
-		float progress = ((float)(splitPos - splitStart)) / ((float)(splitEnd - splitStart));
+		float progress = ((float) (splitPos - splitStart))
+		/ ((float) (splitEnd - splitStart));
 		return Math.min(0.99f, progress);
 	}
 
 	@Override
-	public void initialize(InputSplit genericSplit, TaskAttemptContext attempt)
+	public void initialize(InputSplit genericSplit, TaskAttemptContext ctx)
 	throws IOException, InterruptedException {
+
+		this.context = ((MapContext<?,?,?,?>) ctx);
+		context.setStatus("Running");
+		inputByteCounter = context.getCounter(
+		FileInputFormat.COUNTER_GROUP, FileInputFormat.BYTES_READ);
+
 		currentKey = new LongWritable();
 		currentValue = new Text();
 		FileSplit split = (FileSplit) genericSplit;
 		final Path file = split.getPath();
-		final Configuration conf = attempt.getConfiguration();
+		final Configuration conf = context.getConfiguration();
 		startSequence = conf.get("mapred.matchreader.record.start").getBytes();
 		endSequence = conf.get("mapred.matchreader.record.end").getBytes();
-		maxRecordSize = conf.getLong("mapred.matchreader.record.maxSize", Long.MAX_VALUE);
+		maxRecordSize = conf.getLong("mapred.matchreader.record.maxSize",
+		Long.MAX_VALUE);
 		final CompressionCodecFactory compressionCodecs = new CompressionCodecFactory(
 		conf);
 		final FileSystem fs = file.getFileSystem(conf);
 		FSDataInputStream fileIn = fs.open(split.getPath());
 		fileIn.seek(split.getStart());
-		splitStart = fileIn.getPos();
 		splitEnd = split.getStart() + split.getLength();
 		final CompressionCodec codec = compressionCodecs.getCodec(file);
 		if (codec == null) {
@@ -98,16 +112,18 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 			this.fileIn = fileIn;
 		} else if (codec instanceof SplitEnabledCompressionCodec) {
 			SplitEnabledCompressionCodec splitCodec = (SplitEnabledCompressionCodec) codec;
-			dataIn = splitCodec.createInputStream(fileIn, SplitEnabledCompressionCodec.READ_MODE.BYBLOCK);
-			this.fileIn = (Seekable) dataIn;
+			dataIn = splitCodec.createInputStream(fileIn,
+			SplitEnabledCompressionCodec.READ_MODE.BYBLOCK);
+			this.fileIn = fileIn;
 		} else {
-			// Classic compression codec, no spits??
+			// Classic compression codec, no spits....
 		}
+		lastStartPos = splitStart = this.fileIn.getPos();
 	}
 
 	@Override
 	public boolean nextKeyValue() throws IOException, InterruptedException {
-		if (fileIn == null || fileIn.getPos() > splitEnd) {
+		if (closed) {
 			return false;
 		}
 
@@ -125,7 +141,7 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		int pos = 0;
 		do {
 			if (buf[0] == startSequence[pos]) {
-				pos ++;
+				pos++;
 			} else {
 				pos = 0;
 			}
@@ -161,7 +177,7 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		pos = 0;
 		do {
 			if (buf[0] == endSequence[pos]) {
-				pos ++;
+				pos++;
 			} else {
 				pos = 0;
 			}
@@ -170,7 +186,8 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 			} else {
 				if (valueBuffer.size() > maxRecordSize) {
 					endRecord();
-					// We simply abort reading and seek the next page start, if possible.
+					// We simply abort reading and seek the next page start, if
+					// possible.
 					return nextKeyValue();
 				}
 				read = dataIn.read(buf);
@@ -191,6 +208,8 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		bytes = null;
 
 		if (startPos != lastStartPos) {
+			inputByteCounter.increment(startPos - lastStartPos);
+			context.progress();
 			lastStartPos = startPos;
 			lastStartId = -1;
 		}
@@ -204,7 +223,7 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 
 		return true;
 	}
-
+ 
 	public void startRecord() throws IOException {
 		valueBuffer = new ByteArrayOutputStream();
 		out = valueBuffer;

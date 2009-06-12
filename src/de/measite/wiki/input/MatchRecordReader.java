@@ -3,6 +3,7 @@ package de.measite.wiki.input;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -26,12 +27,15 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 	private long lastStartPos;
 	private long lastStartId;
 	private long maxRecordSize;
-	private byte[] startSequence;
-	private byte[] endSequence;
+	protected byte[] startSequence;
+	protected byte[] endSequence;
 	private Seekable fileIn;
 	private InputStream dataIn;
 	private LongWritable currentKey;
 	private Text currentValue;
+
+	protected volatile ByteArrayOutputStream valueBuffer;
+	protected volatile OutputStream out;
 
 	@Override
 	public void close() throws IOException {
@@ -72,8 +76,6 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		currentKey = new LongWritable();
 		currentValue = new Text();
 		FileSplit split = (FileSplit) genericSplit;
-		splitStart = split.getStart();
-		splitEnd = splitStart + split.getLength();
 		final Path file = split.getPath();
 		final Configuration conf = attempt.getConfiguration();
 		startSequence = conf.get("mapred.matchreader.record.start").getBytes();
@@ -83,7 +85,9 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		conf);
 		final FileSystem fs = file.getFileSystem(conf);
 		FSDataInputStream fileIn = fs.open(split.getPath());
-		fileIn.seek(splitStart);
+		fileIn.seek(split.getStart());
+		splitStart = fileIn.getPos();
+		splitEnd = splitStart + split.getLength();
 		final CompressionCodec codec = compressionCodecs.getCodec(file);
 		if (codec == null) {
 			dataIn = fileIn;
@@ -145,19 +149,21 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 
 		long startPos = fileIn.getPos();
 
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		out.write(startSequence);
+		startRecord();
+		final OutputStream iout = out;
+		iout.write(startSequence);
 
 		// Step 2, seek to the end sequence and write to the output buffer
 		boolean end = false;
 		read = dataIn.read(buf);
 		if (read == -1) {
+			endRecord();
 			close();
 			currentKey = null;
 			currentValue = null;
 			return false;
 		}
-		out.write(buf);
+		iout.write(buf);
 		pos = 0;
 		do {
 			if (buf[0] == endSequence[pos]) {
@@ -168,19 +174,20 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 			if (pos == endSequence.length) {
 				end = true;
 			} else {
-				if (out.size() > maxRecordSize) {
-					out = null;
+				if (valueBuffer.size() > maxRecordSize) {
+					endRecord();
 					// We simply abort reading and seek the next page start, if possible.
 					return nextKeyValue();
 				}
 				read = dataIn.read(buf);
 				if (read == -1) {
 					close();
+					endRecord();
 					currentKey = null;
 					currentValue = null;
 					return false;
 				}
-				out.write(buf);
+				iout.write(buf);
 			}
 		} while (!end);
 
@@ -189,9 +196,11 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 			close();
 		}
 
+		out.flush();
+
 		// Step 3, compute a key / value pair
-		byte[] bytes = out.toByteArray();
-		out = null;
+		byte[] bytes = valueBuffer.toByteArray();
+		endRecord();
 		currentValue.set(bytes);
 		bytes = null;
 
@@ -203,6 +212,16 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		currentKey.set(startPos * 60 + lastStartId);
 
 		return true;
+	}
+
+	public void startRecord() throws IOException {
+		valueBuffer = new ByteArrayOutputStream();
+		out = valueBuffer;
+	}
+
+	public void endRecord() {
+		valueBuffer = null;
+		out = null;
 	}
 
 }

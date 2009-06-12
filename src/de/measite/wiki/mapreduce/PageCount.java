@@ -16,7 +16,7 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import de.measite.wiki.input.MatchInputFormat;
+import de.measite.wiki.input.WikimediaSimplifyInputFormat;
 
 /**
  * Very simple M/R to count the pages in a wikimedia xml dump. Used for
@@ -64,7 +64,7 @@ public class PageCount extends Configured implements Tool {
 			job.setOutputFormatClass(TextOutputFormat.class);
 			job.setOutputKeyClass(Text.class);
 			job.setOutputValueClass(LongWritable.class);
-			job.setInputFormatClass(MatchInputFormat.class);
+			job.setInputFormatClass(WikimediaSimplifyInputFormat.class);
 			FileInputFormat.setInputPaths(job, args[0]);
 			FileOutputFormat.setOutputPath(job, new Path(args[1]));
 			job.submit();

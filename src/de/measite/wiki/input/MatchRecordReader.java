@@ -133,31 +133,25 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 
 		final byte buf[] = new byte[1];
 		boolean start = false;
-		int read = dataIn.read(buf);
-		if (read == -1) {
-			close();
-			return false;
-		}
 		int pos = 0;
+		int checkfreq = (startSequence.length - 1) / 2;
+		int check = 0;
 		do {
+			if (check++ % checkfreq == 0 && fileIn.getPos() >= splitEnd) {
+				return false;
+			}
+			int read = dataIn.read(buf);
+			if (read == -1) {
+				close();
+				return false;
+			}
 			if (buf[0] == startSequence[pos]) {
 				pos++;
+				if (pos == startSequence.length) {
+					start = true;
+				}
 			} else {
 				pos = 0;
-			}
-			if (pos == startSequence.length) {
-				start = true;
-			} else {
-				if (read > 0) {
-					if (fileIn.getPos() >= splitEnd) {
-						return false;
-					}
-				}
-				read = dataIn.read(buf);
-				if (read == -1) {
-					close();
-					return false;
-				}
 			}
 		} while (!start);
 
@@ -168,34 +162,25 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 
 		// Step 2, seek to the end sequence and write to the output buffer
 		boolean end = false;
-		read = dataIn.read(buf);
-		if (read == -1) {
-			close();
-			return false;
-		}
-		out.write(buf);
 		pos = 0;
 		do {
+			int read = dataIn.read(buf);
+			if (read == -1) {
+				close();
+				return false;
+			}
+			out.write(buf);
+			if (valueBuffer.size() > maxRecordSize) {
+				endRecord();
+				return nextKeyValue();
+			}
 			if (buf[0] == endSequence[pos]) {
 				pos++;
+				if (pos == endSequence.length) {
+					end = true;
+				}
 			} else {
 				pos = 0;
-			}
-			if (pos == endSequence.length) {
-				end = true;
-			} else {
-				if (valueBuffer.size() > maxRecordSize) {
-					endRecord();
-					// We simply abort reading and seek the next page start, if
-					// possible.
-					return nextKeyValue();
-				}
-				read = dataIn.read(buf);
-				if (read == -1) {
-					close();
-					return false;
-				}
-				out.write(buf);
 			}
 		} while (!end);
 
@@ -223,7 +208,7 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 
 		return true;
 	}
- 
+
 	public void startRecord() throws IOException {
 		valueBuffer = new ByteArrayOutputStream();
 		out = valueBuffer;

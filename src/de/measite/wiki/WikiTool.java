@@ -2,9 +2,10 @@ package de.measite.wiki;
 
 import org.apache.hadoop.util.ProgramDriver;
 
-import de.measite.wiki.mapreduce.PageCount;
-import de.measite.wiki.mapreduce.PageRelation;
-import de.measite.wiki.mapreduce.PageSplit;
+import de.measite.wiki.tool.PageCount;
+import de.measite.wiki.tool.PageInvertion;
+import de.measite.wiki.tool.PageRelation;
+import de.measite.wiki.tool.PageSplit;
 
 public class WikiTool {
 
@@ -18,7 +19,8 @@ public class WikiTool {
 		try {
 			pgd.addClass("pagecount", PageCount.class, "checking the number of <page> entries");
 			pgd.addClass("pagesplit", PageSplit.class, "split pages to title-named lists");
-			pgd.addClass("pagerelation", PageRelation.class, "checking the number of <page> entries");
+			pgd.addClass("pageinvert", PageInvertion.class, "invert step for debugging");
+			pgd.addClass("pagerelation", PageRelation.class, "full page relation computation");
 			exitCode = pgd.driver(args);
 		} catch (Throwable e) {
 			e.printStackTrace();

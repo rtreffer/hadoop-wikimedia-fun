@@ -1,4 +1,4 @@
-package de.measite.wiki.mapreduce;
+package de.measite.wiki.tool;
 
 import java.io.IOException;
 
@@ -8,7 +8,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -16,34 +15,12 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import de.measite.wiki.input.WikimediaSimplifyInputFormat;
+import de.measite.wiki.mapreduce.PageToTitleMapper;
 
 /**
  * M/R to split the xml into "simplified" pieces. Used to verify the xml output.
  */
 public class PageSplit extends Configured implements Tool {
-
-	public static class PageSplitMapper extends Mapper<Object, Text, Text, Text> {
-
-		private final Text outKey = new Text();
-
-		@Override
-		protected void map(Object key, Text value, Context context)
-		throws IOException, InterruptedException {
-			if (value == null) {
-				return;
-			}
-			String text = value.toString();
-			int pos = text.indexOf("\n    <title>");
-			if (pos == -1) {
-				return;
-			}
-			text = text.substring(pos + 12);
-			pos = text.indexOf("</title>");
-			outKey.set(text.substring(0, pos));
-			context.write(outKey, value);
-		}
-
-	}
 
 	/**
 	 * @param args
@@ -66,7 +43,7 @@ public class PageSplit extends Configured implements Tool {
 		try {
 			Job job = new Job(conf, "page count");
 			job.setJarByClass(PageSplit.class);
-			job.setMapperClass(PageSplitMapper.class);
+			job.setMapperClass(PageToTitleMapper.class);
 			job.setNumReduceTasks(0);
 			job.setOutputFormatClass(TextOutputFormat.class);
 			job.setOutputKeyClass(Text.class);

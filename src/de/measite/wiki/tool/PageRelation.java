@@ -19,7 +19,7 @@ import org.apache.hadoop.util.ToolRunner;
 import de.measite.wiki.input.WikimediaSimplifyInputFormat;
 import de.measite.wiki.mapreduce.PageInvertMapper;
 import de.measite.wiki.mapreduce.ScoreInverterReducer;
-import de.measite.wiki.mapreduce.io.PageInvertWriteable;
+import de.measite.wiki.mapreduce.io.PageInvertWritable;
 
 /**
  * This is the M/R we've been heading for. InputReader: read/split/simplify the
@@ -62,7 +62,7 @@ public class PageRelation extends Configured implements Tool {
 			job.setMapperClass(PageInvertMapper.class);
 
 			job.setMapOutputKeyClass(Text.class);
-			job.setMapOutputValueClass(PageInvertWriteable.class);
+			job.setMapOutputValueClass(PageInvertWritable.class);
 
 			job.setPartitionerClass(HashPartitioner.class);
 			job.setSpeculativeExecution(false);
@@ -71,7 +71,7 @@ public class PageRelation extends Configured implements Tool {
 			job.setNumReduceTasks(1);
 
 			job.setOutputKeyClass(Text.class);
-			job.setOutputValueClass(PageInvertWriteable.class);
+			job.setOutputValueClass(PageInvertWritable.class);
 
 			FileOutputFormat.setOutputPath(job, new Path(args[1]));
 			job.setOutputFormatClass(SequenceFileOutputFormat.class);

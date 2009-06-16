@@ -16,7 +16,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 import de.measite.wiki.input.WikimediaSimplifyInputFormat;
 import de.measite.wiki.mapreduce.PageInvertFastMapper;
-import de.measite.wiki.mapreduce.io.PageInvertWriteable;
+import de.measite.wiki.mapreduce.io.PageInvertWritable;
 
 /**
  * This is the M/R that inverts links, pages, and users and writes some big
@@ -37,9 +37,6 @@ public class PageInvertion extends Configured implements Tool {
 			System.err.println("Usage: pageinvert <infile> <out> <#filesout>");
 			System.exit(2);
 		}
-		conf.set("mapred.matchreader.record.start", "\n  <page>");
-		conf.set("mapred.matchreader.record.end", "\n  </page>");
-		conf.setLong("mapred.matchreader.record.maxSize", 180 * 1024 * 1024);
 		try {
 			Job job = new Job(conf, "pageinvert");
 			job.setJarByClass(PageInvertion.class);
@@ -51,7 +48,7 @@ public class PageInvertion extends Configured implements Tool {
 			job.setMapperClass(PageInvertFastMapper.class);
 
 			job.setMapOutputKeyClass(Text.class);
-			job.setMapOutputValueClass(PageInvertWriteable.class);
+			job.setMapOutputValueClass(PageInvertWritable.class);
 
 			job.setPartitionerClass(HashPartitioner.class);
 			job.setSpeculativeExecution(false);
@@ -59,7 +56,7 @@ public class PageInvertion extends Configured implements Tool {
 			job.setNumReduceTasks(Integer.parseInt(args[2]));
 
 			job.setOutputKeyClass(Text.class);
-			job.setOutputValueClass(PageInvertWriteable.class);
+			job.setOutputValueClass(PageInvertWritable.class);
 
 			FileOutputFormat.setOutputPath(job, new Path(args[1]));
 			job.setOutputFormatClass(SequenceFileOutputFormat.class);

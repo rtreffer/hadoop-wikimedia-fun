@@ -2,6 +2,7 @@ package de.measite.wiki;
 
 import org.apache.hadoop.util.ProgramDriver;
 
+import de.measite.wiki.tool.MaxLinkScore;
 import de.measite.wiki.tool.PageCount;
 import de.measite.wiki.tool.PageInvertion;
 import de.measite.wiki.tool.PageRelation;
@@ -21,6 +22,7 @@ public class WikiTool {
 			pgd.addClass("pagesplit", PageSplit.class, "split pages to title-named lists");
 			pgd.addClass("pageinvert", PageInvertion.class, "invert step for debugging");
 			pgd.addClass("pagerelation", PageRelation.class, "full page relation computation");
+			pgd.addClass("maxlinkscore", MaxLinkScore.class, "maximum link score computation");
 			exitCode = pgd.driver(args);
 		} catch (Throwable e) {
 			e.printStackTrace();

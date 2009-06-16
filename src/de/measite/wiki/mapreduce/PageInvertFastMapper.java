@@ -16,10 +16,10 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import de.measite.wiki.mapreduce.io.PageInvertWriteable;
+import de.measite.wiki.mapreduce.io.PageInvertWritable;
 
 public class PageInvertFastMapper extends
-Mapper<Object, Text, Text, PageInvertWriteable> {
+Mapper<Object, Text, Text, PageInvertWritable> {
 
 	private final static SimpleDateFormat dateFormat = new SimpleDateFormat(
 	"yyyy-MM-dd HH:mm:ss", Locale.US);
@@ -33,6 +33,9 @@ Mapper<Object, Text, Text, PageInvertWriteable> {
 		String content = new String(value.getBytes());
 
 		String title = extractTitle(content);
+		if (title == null) {
+			return;
+		}
 
 		// Step 1 - split all authors
 
@@ -62,7 +65,7 @@ Mapper<Object, Text, Text, PageInvertWriteable> {
 
 			Text outKey = new Text("U" + username);
 
-			PageInvertWriteable outValue = new PageInvertWriteable();
+			PageInvertWritable outValue = new PageInvertWritable();
 			outValue.setSource(title);
 			outValue.setTimestamp(extractTimestamp(revision));
 			if (revision.indexOf("<minor/>") == -1) {
@@ -160,7 +163,10 @@ Mapper<Object, Text, Text, PageInvertWriteable> {
 
 	private String extractTitle(String content) {
 		int startPos = content.indexOf("<title>");
-		int endPos = content.indexOf("</title>");
+		int endPos = content.indexOf("</title>", startPos + 7);
+		if (startPos == -1) {
+			return null;
+		}
 		return content.substring(startPos + 7, endPos).trim();
 	}
 
@@ -173,7 +179,7 @@ Mapper<Object, Text, Text, PageInvertWriteable> {
 			Text outKey = new Text(prefix + word);
 
 			context.write(outKey,
-			new PageInvertWriteable(source, map.get(word)));
+			new PageInvertWritable(source, map.get(word)));
 		}
 	}
 

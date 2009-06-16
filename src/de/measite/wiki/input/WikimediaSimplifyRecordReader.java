@@ -5,6 +5,9 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
 public class WikimediaSimplifyRecordReader extends MatchRecordReader {
 
 	@Override
@@ -123,5 +126,13 @@ public class WikimediaSimplifyRecordReader extends MatchRecordReader {
 			}
 		}
 
+	}
+
+	@Override
+	public void initialize(InputSplit genericSplit, TaskAttemptContext ctx)
+	throws IOException, InterruptedException {
+		super.initialize(genericSplit, ctx);
+		super.startSequence = "\n  <page>".getBytes();
+		super.endSequence = "\n  </page>".getBytes();
 	}
 }

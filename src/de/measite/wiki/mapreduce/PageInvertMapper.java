@@ -29,10 +29,10 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import de.measite.wiki.mapreduce.io.PageInvertWriteable;
+import de.measite.wiki.mapreduce.io.PageInvertWritable;
 
 public class PageInvertMapper extends
-Mapper<Object, Text, Text, PageInvertWriteable> {
+Mapper<Object, Text, Text, PageInvertWritable> {
 
 	public final static Text TIMESTAMP = new Text("T");
 	public final static Text SOURCE = new Text("F");
@@ -122,7 +122,7 @@ Mapper<Object, Text, Text, PageInvertWriteable> {
 
 			for (int i = 0; i < revisions.getLength(); i++) {
 
-				PageInvertWriteable outValue = new PageInvertWriteable();
+				PageInvertWritable outValue = new PageInvertWritable();
 				outValue.setSource(title);
 
 				node = revisions.item(i);
@@ -208,7 +208,7 @@ Mapper<Object, Text, Text, PageInvertWriteable> {
 
 			Text outKey = new Text(word);
 
-			context.write(outKey, new PageInvertWriteable(source, map.get(word)));
+			context.write(outKey, new PageInvertWritable(source, map.get(word)));
 		}
 	}
 

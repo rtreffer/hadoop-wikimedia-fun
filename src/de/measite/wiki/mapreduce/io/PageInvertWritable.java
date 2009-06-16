@@ -6,21 +6,25 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
 
-public class PageInvertWriteable implements Writable {
+public class PageInvertWritable implements Writable {
 
 	private String source;
 	private double score;
 	private long timestamp;
 
-	public PageInvertWriteable() {
+	public PageInvertWritable() {
 		timestamp = -1L;
 	}
 
-	public PageInvertWriteable(String source, double score) {
+	public PageInvertWritable(PageInvertWritable other) {
+		this(other.source,other.score,other.timestamp);
+	}
+
+	public PageInvertWritable(String source, double score) {
 		this(source,score, -1L);
 	}
 
-	public PageInvertWriteable(String source, double score, long timestamp) {
+	public PageInvertWritable(String source, double score, long timestamp) {
 		this.source = source;
 		this.score = score;
 		this.timestamp = timestamp;

@@ -7,6 +7,7 @@ import de.measite.wiki.tool.PageCount;
 import de.measite.wiki.tool.PageInvertion;
 import de.measite.wiki.tool.PageRelation;
 import de.measite.wiki.tool.PageSplit;
+import de.measite.wiki.tool.UserPageGraphExtract;
 
 public class WikiTool {
 
@@ -23,6 +24,7 @@ public class WikiTool {
 			pgd.addClass("pageinvert", PageInvertion.class, "invert step for debugging");
 			pgd.addClass("pagerelation", PageRelation.class, "full page relation computation");
 			pgd.addClass("maxlinkscore", MaxLinkScore.class, "maximum link score computation");
+			pgd.addClass("userpagegraph", UserPageGraphExtract.class, "extract the page graph after an invert");
 			exitCode = pgd.driver(args);
 		} catch (Throwable e) {
 			e.printStackTrace();

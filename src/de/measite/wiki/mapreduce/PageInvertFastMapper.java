@@ -213,7 +213,7 @@ Mapper<Object, Text, Text, PageInvertWritable> {
 				sb.append(c);
 			} else if (sb.length() > 0) {
 				if (sb.length() > 3) {
-					result.add(sb.toString());
+					result.add(sb.toString().toLowerCase());
 				}
 				sb.setLength(0);
 			}

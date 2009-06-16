@@ -96,8 +96,8 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		FileSplit split = (FileSplit) genericSplit;
 		final Path file = split.getPath();
 		final Configuration conf = context.getConfiguration();
-		startSequence = conf.get("mapred.matchreader.record.start").getBytes();
-		endSequence = conf.get("mapred.matchreader.record.end").getBytes();
+		startSequence = conf.get("mapred.matchreader.record.start", "").getBytes();
+		endSequence = conf.get("mapred.matchreader.record.end", "").getBytes();
 		maxRecordSize = conf.getLong("mapred.matchreader.record.maxSize",
 		Long.MAX_VALUE);
 		final CompressionCodecFactory compressionCodecs = new CompressionCodecFactory(

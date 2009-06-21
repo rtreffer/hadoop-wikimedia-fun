@@ -14,7 +14,7 @@ Mapper<Text, PageInvertWritable, Text, LinkWritable> {
 	@Override
 	protected void map(Text key, PageInvertWritable value, Context context) throws IOException,
 	InterruptedException {
-		String k = new String(key.getBytes());
+		String k = key.toString();
 		if (!k.startsWith("L[[")) {
 			return;
 		}

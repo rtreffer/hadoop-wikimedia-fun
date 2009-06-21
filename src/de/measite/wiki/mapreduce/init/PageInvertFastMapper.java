@@ -1,7 +1,7 @@
 /**
  * 
  */
-package de.measite.wiki.mapreduce;
+package de.measite.wiki.mapreduce.init;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -30,7 +30,7 @@ Mapper<Object, Text, Text, PageInvertWritable> {
 		if (value == null || value.getBytes() == null) {
 			return;
 		}
-		String content = new String(value.getBytes());
+		String content = value.toString();
 
 		String title = extractTitle(content);
 		if (title == null) {

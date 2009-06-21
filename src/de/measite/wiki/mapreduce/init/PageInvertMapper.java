@@ -1,7 +1,7 @@
 /**
  * 
  */
-package de.measite.wiki.mapreduce;
+package de.measite.wiki.mapreduce.init;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -98,7 +98,7 @@ Mapper<Object, Text, Text, PageInvertWritable> {
 		try {
 			builder = factory.newDocumentBuilder();
 			Document d = builder.parse(new ByteArrayInputStream(value
-			.getBytes()));
+			.toString().getBytes()));
 
 			Node node = (Node) xpTitle.evaluate(d, XPathConstants.NODE);
 

@@ -38,7 +38,7 @@ Reducer<Text, DoubleWritable, Text, DoubleWritable> {
 		@Override
 		protected void map(Text key, PageInvertWritable value, Context context) throws IOException,
 		InterruptedException {
-			String k = new String(key.getBytes());
+			String k = new String(key.toString());
 			if (!k.startsWith("L[[")) {
 				return;
 			}

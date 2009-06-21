@@ -33,7 +33,7 @@ Reducer<Text, MapWritable, Text, MapWritable> {
 	@Override
 	protected void reduce(Text key, Iterable<MapWritable> values,
 	Context context) throws IOException, InterruptedException {
-		String k = new String(key.getBytes());
+		String k = key.toString();
 		if (k.startsWith("[[User:")) {
 			userReduce(key, values, context);
 			return;
@@ -42,7 +42,7 @@ Reducer<Text, MapWritable, Text, MapWritable> {
 			linkReduce(key, values, context);
 			return;
 		}
-		System.err.println("Can't map " + new String(key.getBytes()));
+		System.err.println("Can't map " + key.toString());
 	}
 
 	protected void linkReduce(Text key, Iterable<MapWritable> values,
@@ -70,7 +70,7 @@ Reducer<Text, MapWritable, Text, MapWritable> {
 			if (score > maxScore) {
 				maxScore = score;
 			}
-			String source = new String(((Text) value.get(SOURCE)).getBytes());
+			String source = ((Text) value.get(SOURCE)).toString();
 			vals.put(time, new Entry(score, source));
 			limit--;
 		}

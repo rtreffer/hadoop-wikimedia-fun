@@ -1,4 +1,4 @@
-package de.measite.wiki.mapreduce;
+package de.measite.wiki.mapreduce.usermap;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -13,28 +13,32 @@ import de.measite.wiki.mapreduce.io.PageInvertWritable;
 
 public class PageRelationByUser {
 
-	public static class MapFunction extends
+	// Step 1, create a simple graph
+
+	public static class MapFunction1 extends
 	Mapper<Text, PageInvertWritable, Text, PageInvertWritable> {
 
 		@Override
 		protected void map(Text key, PageInvertWritable value, Context context)
 		throws IOException, InterruptedException {
 			if (key.getBytes()[0] == 'U') {
-				super.map(new Text(new String(key.getBytes()).substring(1)),
+				super.map(new Text(new String(key.toString()).substring(1)),
 				value, context);
 			}
 		}
 
 	}
 
-	public static class ReduceFunction extends
+	public static class ReduceFunction1 extends
 	Reducer<Text, PageInvertWritable, Text, LinkWritable> {
 
 		@Override
 		protected void reduce(Text key, Iterable<PageInvertWritable> values,
 		Context context) throws IOException, InterruptedException {
 			long limit = context.getConfiguration().getLong(
-			"scoreinverter.userinvert.maxelements", 2000);
+			"scoreinverter.userinvert.maxelements", 1000);
+			String username = key.toString();
+
 			Iterator<PageInvertWritable> iterator = values.iterator();
 			TreeMap<Long, PageInvertWritable> vals = new TreeMap<Long, PageInvertWritable>();
 			double maxScore = Double.MIN_VALUE;
@@ -77,10 +81,10 @@ public class PageRelationByUser {
 
 							if (compare < 0) {
 								LinkWritable link = new LinkWritable(e1.getSource(), e2.getSource(), score);
-								context.write(new Text(e1.getSource() + "|" + e2.getSource()), link);
+								context.write(new Text(username + "|" + e1.getSource() + "|" + e2.getSource()), link);
 							} else {
 								LinkWritable link = new LinkWritable(e2.getSource(), e1.getSource(), score);
-								context.write(new Text(e2.getSource() + "|" + e1.getSource()), link);
+								context.write(new Text(username + "|" + e2.getSource() + "|" + e1.getSource()), link);
 							}
 
 						}
@@ -98,4 +102,66 @@ public class PageRelationByUser {
 		return Math.pow(Math.max(1d, 2d - delta), 4d) - 1d;
 	}
 
+	// Step 2, merge graph links by user (logarithmic)
+
+	public static class ReduceFunction2 extends
+	Reducer<Text, LinkWritable, Text, LinkWritable> {
+
+		@Override
+		protected void reduce(Text key, Iterable<LinkWritable> values,
+		Context context) throws IOException, InterruptedException {
+			Iterator<LinkWritable> iter = values.iterator();
+			LinkWritable result = null;
+			double score = 0d;
+			while (iter.hasNext()) {
+				score += (result = iter.next()).getScore();
+			}
+			score = 1d + Math.log1p(score);
+			result.setScore(score);
+			key.set(result.getSource() + "|" + result.getTarget());
+			context.write(key, result);
+		}
+
+	}
+
+	// Step 3, merge graph links
+
+	public static class ReduceFunction3 extends
+	Reducer<Text, LinkWritable, Text, LinkWritable> {
+
+		@Override
+		protected void reduce(Text key, Iterable<LinkWritable> values,
+		Context context) throws IOException, InterruptedException {
+			Iterator<LinkWritable> iter = values.iterator();
+			LinkWritable result = null;
+			double score = 0d;
+			while (iter.hasNext()) {
+				score += (result = iter.next()).getScore();
+			}
+			score = 1d + Math.log1p(score);
+			result.setScore(score);
+			context.write(key, result);
+		}
+
+	}
+
+	// Combiner for step 2/3
+
+	public static class CombinerFunction23 extends
+	Reducer<Text, LinkWritable, Text, LinkWritable> {
+
+		@Override
+		protected void reduce(Text key, Iterable<LinkWritable> values,
+		Context context) throws IOException, InterruptedException {
+			Iterator<LinkWritable> iter = values.iterator();
+			LinkWritable result = null;
+			double score = 0d;
+			while (iter.hasNext()) {
+				score += (result = iter.next()).getScore();
+			}
+			result.setScore(score);
+			context.write(key, result);
+		}
+
+	}
 }

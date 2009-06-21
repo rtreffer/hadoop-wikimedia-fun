@@ -15,7 +15,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import de.measite.wiki.input.WikimediaSimplifyInputFormat;
-import de.measite.wiki.mapreduce.PageInvertFastMapper;
+import de.measite.wiki.mapreduce.init.PageInvertFastMapper;
 import de.measite.wiki.mapreduce.io.PageInvertWritable;
 
 /**

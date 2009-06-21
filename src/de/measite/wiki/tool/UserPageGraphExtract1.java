@@ -14,21 +14,21 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import de.measite.wiki.mapreduce.PageRelationByUser;
 import de.measite.wiki.mapreduce.io.LinkWritable;
 import de.measite.wiki.mapreduce.io.PageInvertWritable;
+import de.measite.wiki.mapreduce.usermap.PageRelationByUser;
 
 /**
  * Very simple M/R to count the pages in a wikimedia xml dump. Used for
  * verification of the xml record reader.
  */
-public class UserPageGraphExtract extends Configured implements Tool {
+public class UserPageGraphExtract1 extends Configured implements Tool {
 
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		int result = ToolRunner.run(new Configuration(), new UserPageGraphExtract(), args);
+		int result = ToolRunner.run(new Configuration(), new UserPageGraphExtract1(), args);
 		System.exit(result);
 	}
 
@@ -41,9 +41,9 @@ public class UserPageGraphExtract extends Configured implements Tool {
 		}
 		try {
 			Job job = new Job(conf, "userpagegraph");
-			job.setJarByClass(UserPageGraphExtract.class);
-			job.setMapperClass(PageRelationByUser.MapFunction.class);
-			job.setReducerClass(PageRelationByUser.ReduceFunction.class);
+			job.setJarByClass(UserPageGraphExtract1.class);
+			job.setMapperClass(PageRelationByUser.MapFunction1.class);
+			job.setReducerClass(PageRelationByUser.ReduceFunction1.class);
 			job.setMapOutputValueClass(PageInvertWritable.class);
 			job.setOutputFormatClass(SequenceFileOutputFormat.class);
 			job.setOutputKeyClass(Text.class);

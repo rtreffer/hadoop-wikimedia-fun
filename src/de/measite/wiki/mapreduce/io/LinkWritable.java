@@ -63,4 +63,11 @@ public class LinkWritable implements Writable {
 		this.score = score;
 	}
 
+	public String getPrimaryKey() {
+		if (source.compareTo(target) < 0) {
+			return source + '|' + target;
+		} else {
+			return target + '|' + source;
+		}
+	}
 }

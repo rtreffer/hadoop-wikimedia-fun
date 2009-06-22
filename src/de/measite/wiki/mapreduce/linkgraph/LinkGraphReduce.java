@@ -58,7 +58,7 @@ public class LinkGraphReduce {
 			}
 			for (ArrayList<LinkWritable> list: scores.values().toArray(new ArrayList[0])) {
 				for (LinkWritable l: list) {
-					context.write(new Text(l.getSource() + '|' + l.getTarget()), l);
+					context.write(new Text(l.getPrimaryKey()), l);
 				}
 			}
 		}

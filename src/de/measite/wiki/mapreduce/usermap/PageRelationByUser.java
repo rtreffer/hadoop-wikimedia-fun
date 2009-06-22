@@ -79,13 +79,13 @@ public class PageRelationByUser {
 							* e2.getScore())
 							* distance * maxScore;
 
+							LinkWritable link = null;
 							if (compare < 0) {
-								LinkWritable link = new LinkWritable(e1.getSource(), e2.getSource(), score);
-								context.write(new Text(username + "|" + e1.getSource() + "|" + e2.getSource()), link);
+								link = new LinkWritable(e1.getSource(), e2.getSource(), score);
 							} else {
-								LinkWritable link = new LinkWritable(e2.getSource(), e1.getSource(), score);
-								context.write(new Text(username + "|" + e2.getSource() + "|" + e1.getSource()), link);
+								link = new LinkWritable(e2.getSource(), e1.getSource(), score);
 							}
+							context.write(new Text(username + "|" + link.getPrimaryKey()), link);
 
 						}
 					} else {
@@ -118,7 +118,7 @@ public class PageRelationByUser {
 			}
 			score = 1d + Math.log1p(score);
 			result.setScore(score);
-			key.set(result.getSource() + "|" + result.getTarget());
+			key.set(result.getPrimaryKey());
 			context.write(key, result);
 		}
 

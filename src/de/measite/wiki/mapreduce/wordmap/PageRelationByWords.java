@@ -55,13 +55,13 @@ public class PageRelationByWords {
 
 					double score = e1.getScore() + e2.getScore();
 
+					LinkWritable link = null;
 					if (compare < 0) {
-						LinkWritable link = new LinkWritable(e1.getSource(), e2.getSource(), score);
-						context.write(new Text(e1.getSource() + "|" + e2.getSource()), link);
+						link = new LinkWritable(e1.getSource(), e2.getSource(), score);
 					} else  if (compare > 0){
-						LinkWritable link = new LinkWritable(e2.getSource(), e1.getSource(), score);
-						context.write(new Text(e2.getSource() + "|" + e1.getSource()), link);
+						link = new LinkWritable(e2.getSource(), e1.getSource(), score);
 					}
+					context.write(new Text(link.getPrimaryKey()), link);
 
 				}
 			}

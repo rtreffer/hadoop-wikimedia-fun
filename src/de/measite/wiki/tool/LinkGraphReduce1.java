@@ -38,7 +38,6 @@ public class LinkGraphReduce1 extends Configured implements Tool {
 			Job job = new Job(conf, "linkgraphreduce1");
 			job.setJarByClass(LinkGraphReduce1.class);
 			job.setMapperClass(LinkGraphReduce.MapFunction1.class);
-			job.setCombinerClass(LinkGraphReduce.ReduceFunction1.class);
 			job.setReducerClass(LinkGraphReduce.ReduceFunction1.class);
 			job.setMapOutputValueClass(LinkWritable.class);
 			job.setOutputFormatClass(SequenceFileOutputFormat.class);

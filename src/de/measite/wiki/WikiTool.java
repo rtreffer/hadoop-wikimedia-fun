@@ -5,6 +5,7 @@ import org.apache.hadoop.util.ProgramDriver;
 import de.measite.wiki.tool.LinkGraphReduce1;
 import de.measite.wiki.tool.LinkGraphReduce2;
 import de.measite.wiki.tool.MaxLinkScore;
+import de.measite.wiki.tool.NormalizeLinkGraph;
 import de.measite.wiki.tool.PageCount;
 import de.measite.wiki.tool.PageInvertion;
 import de.measite.wiki.tool.PageRelation;
@@ -30,6 +31,7 @@ public class WikiTool {
 			pgd.addClass("pageinvert", PageInvertion.class, "invert step for debugging");
 			pgd.addClass("pagerelation", PageRelation.class, "full page relation computation");
 			pgd.addClass("maxlinkscore", MaxLinkScore.class, "maximum link score computation");
+			pgd.addClass("normalizelinkgraph", NormalizeLinkGraph.class, "normalize link scores in the interval [0..1]");
 			pgd.addClass("userpagegraph1", UserPageGraphExtract1.class, "extract the page graph after an invert (step1)");
 			pgd.addClass("userpagegraph2", UserPageGraphExtract2.class, "extract the page graph after an invert (step2)");
 			pgd.addClass("userpagegraph3", UserPageGraphExtract3.class, "extract the page graph after an invert (step3)");

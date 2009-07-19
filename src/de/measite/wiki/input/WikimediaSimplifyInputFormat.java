@@ -8,7 +8,9 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-
+/**
+ * Simple input format to enforce a WikimediaSimplifyRecordReader.
+ */
 public class WikimediaSimplifyInputFormat extends MatchInputFormat {
 
 	@Override

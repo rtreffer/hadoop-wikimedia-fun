@@ -23,6 +23,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
+/**
+ * A {@link RecordReader} for records that start/end with a fixed string.
+ */
 public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 
 	private long splitStart;

@@ -14,6 +14,9 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
+/**
+ * MatchInputFormat is a {@link MatchRecordReader} only input format.
+ */
 public class MatchInputFormat extends FileInputFormat<LongWritable, Text> {
 
 	@Override

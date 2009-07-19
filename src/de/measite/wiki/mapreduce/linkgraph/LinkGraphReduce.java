@@ -13,7 +13,7 @@ import de.measite.wiki.mapreduce.io.LinkWritable;
 
 /**
  * LinkGraphReduce will reorder all vertices to the edges, sort by score
- * and reunion the best best vertices.
+ * and reunion the best vertices.
  */
 public class LinkGraphReduce {
 

@@ -15,19 +15,80 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import de.measite.wiki.mapreduce.io.LinkWritable;
 import de.measite.wiki.mapreduce.linkgraph.LinkGraphAnalyse;
 import de.measite.wiki.mapreduce.linkgraph.LinkGraphNormalize;
+import de.measite.wiki.mapreduce.linkgraph.LinkGraphAnalyse.LinkScoreExtract;
+import de.measite.wiki.mapreduce.linkgraph.LinkGraphAnalyse.MaxDoubleValue;
 
 public class NormalizeLinkGraph extends Configured implements Tool {
 
 	public static void main(String[] args) throws Exception {
 		int result = ToolRunner.run(new Configuration(), new NormalizeLinkGraph(), args);
 		System.exit(result);
+	}
+
+	public Job getMaxScoreJob(Path src, Path dst, Configuration conf) throws IOException {
+		Job job = new Job(conf, "normalize:maxlinkscore");
+		job.setJarByClass(NormalizeLinkGraph.class);
+		job.setMapperClass(LinkScoreExtract.class);
+		job.setCombinerClass(MaxDoubleValue.class);
+		job.setReducerClass(MaxDoubleValue.class);
+		job.setMapOutputValueClass(DoubleWritable.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(DoubleWritable.class);
+		job.setInputFormatClass(SequenceFileInputFormat.class);
+		FileInputFormat.setInputPaths(job, src);
+		FileOutputFormat.setOutputPath(job, dst);
+		return job;
+	}
+
+	public Job getAnalyzeJob(Path src, Path dst, Path tmp, int iteration, Configuration conf) throws IOException {
+		Job job = new Job(conf, "normalize:bucketize(" + (iteration+1) + "/5)");
+		job.setJarByClass(NormalizeLinkGraph.class);
+		job.setMapperClass(LinkGraphAnalyse.BucketizeMap.class);
+		job.setCombinerClass(LongSumReducer.class);
+		job.setReducerClass(LongSumReducer.class);
+		job.setMapOutputKeyClass(LongWritable.class);
+		job.setMapOutputValueClass(LongWritable.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(LongWritable.class);
+		job.setInputFormatClass(SequenceFileInputFormat.class);
+		if (iteration == 0) {
+			FileInputFormat.setInputPaths(job, src);
+		} else {
+			FileInputFormat.setInputPaths(job, new Path(dst, "i" + iteration));
+		}
+		FileOutputFormat.setOutputPath(job, tmp);
+		return job;
+	}
+
+	public Job getNormalizeJob(Path src, Path dst, int iteration, Configuration conf) throws IOException {
+		Job job = new Job(conf, "normalize:normalize(" + (iteration+1) + "/5)");
+		job.setJarByClass(NormalizeLinkGraph.class);
+		job.setMapperClass(LinkGraphNormalize.NormalizeMap.class);
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(LinkWritable.class);
+		job.setOutputFormatClass(SequenceFileOutputFormat.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(LinkWritable.class);
+		job.setInputFormatClass(SequenceFileInputFormat.class);
+		if (iteration == 0) {
+			FileInputFormat.setInputPaths(job, src);
+			FileOutputFormat.setOutputPath(job, new Path(dst, "i1"));
+		} else {
+			FileInputFormat.setInputPaths(job, new Path(dst, "i" + iteration));
+			FileOutputFormat.setOutputPath(job, new Path(dst, "i" + (iteration + 1)));
+		}
+		return job;
 	}
 
 	@Override
@@ -38,27 +99,20 @@ public class NormalizeLinkGraph extends Configured implements Tool {
 			return 1;
 		}
 		FileSystem fs = FileSystem.get(conf);
+		Path src = new Path(args[0]);
 		Path dst = new Path(args[1]);
-		Path dstFile = new Path(dst, "part-r-00000");
+		Path dstTmp = new Path(dst, "tmp");
+		Path dstFile = new Path(dstTmp, "part-r-00000");
 		try {
-			Job job = new Job(conf, "normalize:maxlinkscore");
-			job.setJarByClass(NormalizeLinkGraph.class);
-			job.setMapperClass(LinkGraphNormalize.LinkScoreExtract.class);
-			job.setCombinerClass(LinkGraphNormalize.MaxDoubleValue.class);
-			job.setReducerClass(LinkGraphNormalize.MaxDoubleValue.class);
-			job.setMapOutputValueClass(DoubleWritable.class);
-			job.setOutputFormatClass(TextOutputFormat.class);
-			job.setOutputKeyClass(Text.class);
-			job.setOutputValueClass(DoubleWritable.class);
-			job.setInputFormatClass(SequenceFileInputFormat.class);
-			FileInputFormat.setInputPaths(job, args[0]);
-			FileOutputFormat.setOutputPath(job, dst);
+			Job job = getMaxScoreJob(new Path(args[0]), dstTmp, conf);
+			System.out.println("Compute graph maximum");
 			job.submit();
 			job.waitForCompletion(true);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return 2;
 		}
+		System.out.println("Reading result from " + dstFile);
 		LineNumberReader lnr = new LineNumberReader(new InputStreamReader(fs.open(dstFile)));
 		String line = lnr.readLine();
 		lnr.close();
@@ -69,28 +123,19 @@ public class NormalizeLinkGraph extends Configured implements Tool {
 		for (int i = 0; i < 1000; i++) {
 			buckets[i] = (i + 1) * 0.001 * max;
 		}
-		for (int i = 0; i < 5; i++) {
-			fs.delete(dst, true);
+		for (int i = 0; i < 2; i++) {
+			fs.delete(dstTmp, true);
 
 			System.out.println("Bucketize " + i);
 			String s[] = new String[buckets.length];
+			for (int j = 0; j < 1000; j++) {
+				buckets[j] = (j + 1) * 0.001 * max;
+			}
 			for (int j = 0; j < buckets.length; j++) {
 				s[j] = Double.toString(buckets[j]);
 			}
 			conf.setStrings("linkgraph.analyse.bucketize.buckets", s);
-			Job job = new Job(conf, "normalize:bucketize(" + (i+1) + "/5)");
-			job.setJarByClass(NormalizeLinkGraph.class);
-			job.setMapperClass(LinkGraphAnalyse.BucketizeMap.class);
-			job.setCombinerClass(LongSumReducer.class);
-			job.setReducerClass(LongSumReducer.class);
-			job.setMapOutputKeyClass(LongWritable.class);
-			job.setMapOutputValueClass(LongWritable.class);
-			job.setOutputFormatClass(TextOutputFormat.class);
-			job.setOutputKeyClass(Text.class);
-			job.setOutputValueClass(LongWritable.class);
-			job.setInputFormatClass(SequenceFileInputFormat.class);
-			FileInputFormat.setInputPaths(job, args[0]);
-			FileOutputFormat.setOutputPath(job, dst);
+			Job job = getAnalyzeJob(src, dst, dstTmp, i, conf);
 			job.submit();
 			job.waitForCompletion(true);
 
@@ -149,8 +194,21 @@ public class NormalizeLinkGraph extends Configured implements Tool {
 				}
 			}
 			buckets = nbuckets;
+
+			// Normalize
+			System.out.println("Normalize");
+			for (int j = 0; j < buckets.length; j++) {
+				s[j] = Double.toString(buckets[j]);
+			}
+			conf.setStrings("linkgraph.analyse.bucketize.buckets", s);
+			job = getNormalizeJob(src, dst, i, conf);
+			job.setNumReduceTasks(Integer.parseInt(args[2]));
+			job.submit();
+			job.waitForCompletion(true);
+
+			max = 1d;
 		}
-		//fs.delete(dst, true);
+		fs.delete(dstTmp, true);
 
 		return 0;
 	}

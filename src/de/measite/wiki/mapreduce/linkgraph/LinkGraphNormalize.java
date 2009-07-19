@@ -1,48 +1,55 @@
 package de.measite.wiki.mapreduce.linkgraph;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Arrays;
 
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Reducer.Context;
 
 import de.measite.wiki.mapreduce.io.LinkWritable;
-import de.measite.wiki.mapreduce.io.PageInvertWritable;
 
 public class LinkGraphNormalize {
 
-	public static class LinkScoreExtract extends
-	Mapper<Text, LinkWritable, Text, DoubleWritable> {
+	public static class NormalizeMap extends
+	Mapper<Text, LinkWritable, Text, LinkWritable> {
 
-		private final static Text SCORE = new Text("score");
+		private double[] bucket;
+
+		@Override
+		protected void setup(Context context) throws IOException,
+		InterruptedException {
+			super.setup(context);
+			String buckets[] = context.getConfiguration().getStrings("linkgraph.analyse.bucketize.buckets");
+			if (buckets == null) {
+				throw new IllegalStateException("Normalize needs a setting linkgraph.analyse.normalize.buckets");
+			}
+			double bucket[] = new double[buckets.length];
+			for (int i = 0; i < buckets.length; i++) {
+				bucket[i] = Double.parseDouble(buckets[i]);
+			}
+			Arrays.sort(bucket);
+			this.bucket = bucket;
+		}
 
 		@Override
 		protected void map(Text key, LinkWritable value, Context context)
 		throws IOException, InterruptedException {
-			context.write(SCORE, new DoubleWritable(value.getScore()));
-		}
-
-	}
-
-	public static class MaxDoubleValue extends
-	Reducer<Text, DoubleWritable, Text, DoubleWritable> {
-
-		@Override
-		protected void reduce(Text key, Iterable<DoubleWritable> values,
-		Context context) throws IOException, InterruptedException {
-			double max = -1d;
-			Iterator<DoubleWritable> iter = values.iterator();
-			while (iter.hasNext()) {
-				double value = iter.next().get();
-				if (value > max) {
-					max = value;
-				}
+			if (value == null) {
+				return;
 			}
-			context.write(key, new DoubleWritable(max));
+			int pos = Arrays.binarySearch(bucket, value.getScore());
+			if (pos < 0) {
+				pos = -1 -pos;
+			}
+			double span = bucket[pos];
+			double score = value.getScore();
+			if (pos > 0) {
+				double b = bucket[pos - 1];
+				span -= b;
+				score -= b;
+			}
+			value.setScore((score / span + pos) * (1d / bucket.length));
+			context.write(key, value);
 		}
 
 	}

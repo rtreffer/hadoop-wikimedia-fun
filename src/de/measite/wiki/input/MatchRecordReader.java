@@ -14,7 +14,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
-import org.apache.hadoop.io.compress.SplitEnabledCompressionCodec;
+import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MapContext;
@@ -113,10 +113,11 @@ public class MatchRecordReader extends RecordReader<LongWritable, Text> {
 		if (codec == null) {
 			dataIn = fileIn;
 			this.fileIn = fileIn;
-		} else if (codec instanceof SplitEnabledCompressionCodec) {
-			SplitEnabledCompressionCodec splitCodec = (SplitEnabledCompressionCodec) codec;
-			dataIn = splitCodec.createInputStream(fileIn,
-			SplitEnabledCompressionCodec.READ_MODE.BYBLOCK);
+		} else if (codec instanceof SplittableCompressionCodec) {
+		    SplittableCompressionCodec splitCodec = (SplittableCompressionCodec) codec;
+			dataIn = splitCodec.createInputStream(fileIn, codec.createDecompressor(),
+			        split.getStart(), split.getLength(),
+			        SplittableCompressionCodec.READ_MODE.BYBLOCK);
 			this.fileIn = fileIn;
 		} else {
 			// Classic compression codec, no spits....

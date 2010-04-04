@@ -41,7 +41,7 @@ public class PageCount extends Configured implements Tool {
 		}
 		conf.set("mapred.matchreader.record.start", "\n  <page>");
 		conf.set("mapred.matchreader.record.end", "\n  </page>");
-		conf.setLong("mapred.matchreader.record.maxSize", 180*1024*1024);
+		conf.setLong("mapred.matchreader.record.maxSize", 100*1024*1024);
 		try {
 			Job job = new Job(conf, "page count");
 			job.setJarByClass(PageCount.class);
